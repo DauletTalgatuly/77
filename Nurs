@@ -130,3 +130,114 @@ class AuthorMatchStrategy implements MatchStrategy {
 
 }
 
+
+
+
+
+
+
+
+
+import java.util.ArrayList;
+
+/*
+ * Клуб книголюбов: паттерн Strategy (подбор пары)
+ *
+ * MatchStrategy — общий интерфейс: score(a, b) возвращает баллы совместимости.
+ * Четыре стратегии: жанры, авторы, город + возраст, комбинированная (с весами).
+ * Matchmaker работает только с интерфейсом и может менять стратегию на лету.
+ */
+
+public class Main {
+    public static void main(String[] args) {
+        // --- Пользователи ---
+        User daniel = new User("Даниэлдин", 19, "Алматы");
+        daniel.addGenre("фэнтези");
+        daniel.addGenre("классика");
+        daniel.addGenre("поэзия");
+        daniel.addAuthor("Толкин");
+        daniel.addAuthor("Достоевский");
+        daniel.addAuthor("Абай");
+
+        User daulet = new User("Дәулет", 20, "Алматы");
+        daulet.addGenre("фэнтези");
+        daulet.addGenre("фантастика");
+        daulet.addGenre("классика");
+        daulet.addAuthor("Толкин");
+        daulet.addAuthor("Брэдбери");
+        daulet.addAuthor("Достоевский");
+
+        User nursultan = new User("Нұрсұлтан", 20, "Астана");
+        nursultan.addGenre("детектив");
+        nursultan.addGenre("романтика");
+        nursultan.addAuthor("Агата Кристи");
+        nursultan.addAuthor("Джейн Остин");
+
+        User asylzhan = new User("Асылжан", 20, "Алматы");
+        asylzhan.addGenre("фантастика");
+        asylzhan.addGenre("классика");
+        asylzhan.addAuthor("Брэдбери");
+        asylzhan.addAuthor("Азимов");
+        asylzhan.addAuthor("Достоевский");
+
+        ArrayList<User> all = new ArrayList<>();
+        all.add(daniel);
+        all.add(daulet);
+        all.add(nursultan);
+        all.add(asylzhan);
+
+        // --- Подбор пары для Даниэлдина разными стратегиями ---
+        System.out.println("=== Подбор пары для " + daniel.getName() + " (Strategy) ===");
+        Matchmaker matchmaker = new Matchmaker(new GenreMatchStrategy());
+        matchmaker.printMatches(daniel, all);
+
+        matchmaker.setStrategy(new AuthorMatchStrategy());
+        matchmaker.printMatches(daniel, all);
+
+        matchmaker.setStrategy(new CityAgeMatchStrategy());
+        matchmaker.printMatches(daniel, all);
+
+        // Комбинированная формула: собирается из других стратегий с весами
+        CombinedMatchStrategy combined = new CombinedMatchStrategy();
+        combined.add(new GenreMatchStrategy(), 1.0);
+        combined.add(new AuthorMatchStrategy(), 0.5);
+        combined.add(new CityAgeMatchStrategy(), 1.0);
+        matchmaker.setStrategy(combined);
+        matchmaker.printMatches(daniel, all);
+
+        User best = matchmaker.findBest(daniel, all);
+        if (best != null) {
+            System.out.println();
+            System.out.println("Лучшая пара (" + combined.getName() + "): " + best.getName());
+        }
+    }
+}
+
+// ======================= МОДЕЛЬ ================================
+
+class User {
+    private String name;
+    private int age;
+    private String city;
+    private ArrayList<String> genres = new ArrayList<>();
+    private ArrayList<String> authors = new ArrayList<>();
+
+    public User(String name, int age, String city) {
+        this.name = name;
+        this.age = age;
+        this.city = city;
+    }
+
+    public void addGenre(String genre)   { genres.add(genre); }
+    public void addAuthor(String author) { authors.add(author); }
+
+    public String getName()               { return name; }
+    public int getAge()                   { return age; }
+    public String getCity()               { return city; }
+    public ArrayList<String> getGenres()  { return genres; }
+    public ArrayList<String> getAuthors() { return authors; }
+}
+
+
+
+
