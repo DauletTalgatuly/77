@@ -43,3 +43,50 @@ class Matchmaker {
 
 
 
+
+
+
+
+
+class CityAgeMatchStrategy implements MatchStrategy {
+    public int score(User a, User b) {
+        int points = 0;
+        if (a.getCity().equals(b.getCity())) {
+            points += 20;
+        }
+        int ageDiff = Math.abs(a.getAge() - b.getAge());
+        if (ageDiff <= 2) {
+            points += 10;
+        } else if (ageDiff <= 5) {
+            points += 5;
+        }
+        return points;
+    }
+
+    public String getName() { return "по городу и возрасту"; }
+}
+
+// Стратегия 4: комбинированная формула.
+// Складывает баллы других стратегий, каждая умножается на свой вес.
+// Новые стратегии добавляются через add() без изменения этого класса.
+class CombinedMatchStrategy implements MatchStrategy {
+    private ArrayList<MatchStrategy> strategies = new ArrayList<>();
+    private ArrayList<Double> weights = new ArrayList<>();
+
+    public CombinedMatchStrategy add(MatchStrategy strategy, double weight) {
+        strategies.add(strategy);
+        weights.add(weight);
+        return this;
+    }
+
+    public int score(User a, User b) {
+        double total = 0;
+        for (int i = 0; i < strategies.size(); i++) {
+            total += strategies.get(i).score(a, b) * weights.get(i);
+        }
+        return (int) Math.round(total);
+    }
+
+    public String getName() { return "по комбинированной формуле"; }
+}
+
