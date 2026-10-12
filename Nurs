@@ -88,5 +88,45 @@ class CombinedMatchStrategy implements MatchStrategy {
     }
 
     public String getName() { return "по комбинированной формуле"; }
+
+
+
+
+
+
+
+
+
+// Стратегия 1: по общим жанрам — 10 баллов за каждый общий жанр
+class GenreMatchStrategy implements MatchStrategy {
+    public int score(User a, User b) {
+        int points = 0;
+        for (String genre : a.getGenres()) {
+            if (b.getGenres().contains(genre)) {
+                points += 10;
+            }
+        }
+        return points;
+    }
+
+    public String getName() { return "по жанрам"; }
+}
+
+// Стратегия 2: по общим любимым авторам — 15 баллов за каждого
+class AuthorMatchStrategy implements MatchStrategy {
+    public int score(User a, User b) {
+        int points = 0;
+        for (String author : a.getAuthors()) {
+            if (b.getAuthors().contains(author)) {
+                points += 15;
+            }
+        }
+        return points;
+    }
+
+    public String getName() { return "по авторам"; }
+}
+
+
 }
 
