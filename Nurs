@@ -1,0 +1,45 @@
+interface MatchStrategy {
+    int score(User a, User b);   // сколько баллов совместимости
+    String getName();
+}
+
+// Класс, который использует стратегию
+class Matchmaker {
+    private MatchStrategy strategy;
+
+    public Matchmaker(MatchStrategy strategy) {
+        this.strategy = strategy;
+    }
+
+    public void setStrategy(MatchStrategy strategy) {
+        this.strategy = strategy;
+    }
+
+    public void printMatches(User user, ArrayList<User> all) {
+        System.out.println("Подбор " + strategy.getName() + ":");
+        for (User other : all) {
+            if (other != user) {
+                int points = strategy.score(user, other);
+                System.out.println("  " + other.getName() + " — " + points + " баллов");
+            }
+        }
+    }
+
+    public User findBest(User user, ArrayList<User> all) {
+        User best = null;
+        int bestScore = 0;
+        for (User other : all) {
+            if (other != user) {
+                int points = strategy.score(user, other);
+                if (points > bestScore) {
+                    bestScore = points;
+                    best = other;
+                }
+            }
+        }
+        return best;
+    }
+}
+
+
+
