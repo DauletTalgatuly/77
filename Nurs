@@ -1,9 +1,15 @@
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.nio.charset.StandardCharsets;
+
 interface MatchStrategy {
-    int score(User a, User b);   // сколько баллов совместимости
+    int score(User a, User b);
     String getName();
 }
 
-// Класс, который использует стратегию
 class Matchmaker {
     private MatchStrategy strategy;
 
@@ -16,18 +22,18 @@ class Matchmaker {
     }
 
     public void printMatches(User user, ArrayList<User> all) {
-        System.out.println("Подбор " + strategy.getName() + ":");
+        System.out.println("Podbor " + strategy.getName() + ":");
         for (User other : all) {
             if (other != user) {
                 int points = strategy.score(user, other);
-                System.out.println("  " + other.getName() + " — " + points + " баллов");
+                System.out.println("  " + other.getName() + " - " + points + " ballov");
             }
         }
     }
 
     public User findBest(User user, ArrayList<User> all) {
         User best = null;
-        int bestScore = 0;
+        int bestScore = -1;
         for (User other : all) {
             if (other != user) {
                 int points = strategy.score(user, other);
@@ -46,12 +52,10 @@ class Matchmaker {
 
 
 
-
-
 class CityAgeMatchStrategy implements MatchStrategy {
     public int score(User a, User b) {
         int points = 0;
-        if (a.getCity().equals(b.getCity())) {
+        if (a.getCity().equalsIgnoreCase(b.getCity())) {
             points += 20;
         }
         int ageDiff = Math.abs(a.getAge() - b.getAge());
@@ -63,12 +67,11 @@ class CityAgeMatchStrategy implements MatchStrategy {
         return points;
     }
 
-    public String getName() { return "по городу и возрасту"; }
+    public String getName() {
+        return "po gorodu i vozrastu";
+    }
 }
 
-// Стратегия 4: комбинированная формула.
-// Складывает баллы других стратегий, каждая умножается на свой вес.
-// Новые стратегии добавляются через add() без изменения этого класса.
 class CombinedMatchStrategy implements MatchStrategy {
     private ArrayList<MatchStrategy> strategies = new ArrayList<>();
     private ArrayList<Double> weights = new ArrayList<>();
@@ -87,7 +90,68 @@ class CombinedMatchStrategy implements MatchStrategy {
         return (int) Math.round(total);
     }
 
-    public String getName() { return "по комбинированной формуле"; }
+    public String getName() {
+        return "po kombinirovannoy formule";
+    }
+}
+
+class SecurityUtils {
+    private static final int HASH_ROUNDS = 10000;
+    private static final int MAX_ATTEMPTS = 3;
+    private static final SecureRandom random = new SecureRandom();
+    private static final HashMap<User, Integer> failedAttempts = new HashMap<>();
+
+    public static String generateSalt() {
+        byte[] bytes = new byte[16];
+        random.nextBytes(bytes);
+        return toHex(bytes);
+    }
+
+    public static String hashPassword(String password, String salt) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = (salt + password).getBytes(StandardCharsets.UTF_8);
+            for (int i = 0; i < HASH_ROUNDS; i++) {
+                hash = md.digest(hash);
+            }
+            return toHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 nedostupen", e);
+        }
+    }
+
+    public static boolean verifyPassword(String password, String salt, String expectedHash) {
+        String hash = hashPassword(password, salt);
+        return MessageDigest.isEqual(
+                hash.getBytes(StandardCharsets.UTF_8),
+                expectedHash.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static String toHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b & 0xff));
+        }
+        return sb.toString();
+    }
+
+    public static boolean isValidName(String name) {
+        return name != null && name.matches("[A-Za-z]{2,30}");
+    }
+
+    public static boolean isValidAge(int age) {
+        return age >= 14 && age <= 30;
+    }
+
+    public static boolean isValidEmail(String email) {
+        return email != null && email.matches("[A-Za-z0-9._]+@[A-Za-z0-9.]+\\.[A-Za-z]{2,}");
+    }
+
+    public static boolean isStrongPassword(String password) {
+        return password != null
+                && password.length() >= 8
+                && password.matches(".*[A-Za-z].*")
+                && password.
 
 
 
@@ -95,9 +159,6 @@ class CombinedMatchStrategy implements MatchStrategy {
 
 
 
-
-
-// Стратегия 1: по общим жанрам — 10 баллов за каждый общий жанр
 class GenreMatchStrategy implements MatchStrategy {
     public int score(User a, User b) {
         int points = 0;
@@ -109,10 +170,11 @@ class GenreMatchStrategy implements MatchStrategy {
         return points;
     }
 
-    public String getName() { return "по жанрам"; }
+    public String getName() {
+        return "po zhanram";
+    }
 }
 
-// Стратегия 2: по общим любимым авторам — 15 баллов за каждого
 class AuthorMatchStrategy implements MatchStrategy {
     public int score(User a, User b) {
         int points = 0;
@@ -124,61 +186,140 @@ class AuthorMatchStrategy implements MatchStrategy {
         return points;
     }
 
-    public String getName() { return "по авторам"; }
+    public String getName() {
+        return "po avtoram";
+    }
 }
 
 
+
+
+
+
+class User {
+    private String name;
+    private int age;
+    private String city;
+    private String email;
+    private String salt;
+    private String passwordHash;
+    private ArrayList<String> genres = new ArrayList<>();
+    private ArrayList<String> authors = new ArrayList<>();
+
+    public User(String name, int age, String city, String email, String password) {
+        this.name = name;
+        this.age = age;
+        this.city = city;
+        this.email = email;
+        this.salt = SecurityUtils.generateSalt();
+        this.passwordHash = SecurityUtils.hashPassword(password, salt);
+    }
+
+    public void addGenre(String genre) {
+        genres.add(genre);
+    }
+
+    public void addAuthor(String author) {
+        authors.add(author);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public ArrayList<String> getGenres() {
+        return genres;
+    }
+
+    public ArrayList<String> getAuthors() {
+        return authors;
+    }
+
+    public boolean checkPassword(String password) {
+        return SecurityUtils.verifyPassword(password, salt, passwordHash);
+    }
+
+    public String getMaskedEmail() {
+        return SecurityUtils.maskEmail(email);
+    }
+
+    public String getHashPreview() {
+        return passwordHash.substring(0, 16);
+    }
 }
-
-
-
-
-
-
-
-
-
-import java.util.ArrayList;
-
-/*
- * Клуб книголюбов: паттерн Strategy (подбор пары)
- *
- * MatchStrategy — общий интерфейс: score(a, b) возвращает баллы совместимости.
- * Четыре стратегии: жанры, авторы, город + возраст, комбинированная (с весами).
- * Matchmaker работает только с интерфейсом и может менять стратегию на лету.
- */
 
 public class Main {
     public static void main(String[] args) {
-        // --- Пользователи ---
-        User daniel = new User("Даниэлдин", 19, "Алматы");
-        daniel.addGenre("фэнтези");
-        daniel.addGenre("классика");
-        daniel.addGenre("поэзия");
-        daniel.addAuthor("Толкин");
-        daniel.addAuthor("Достоевский");
-        daniel.addAuthor("Абай");
+        System.out.println("Registratsiya (Security)");
 
-        User daulet = new User("Дәулет", 20, "Алматы");
-        daulet.addGenre("фэнтези");
-        daulet.addGenre("фантастика");
-        daulet.addGenre("классика");
-        daulet.addAuthor("Толкин");
-        daulet.addAuthor("Брэдбери");
-        daulet.addAuthor("Достоевский");
+        User daniel = SecurityUtils.registerUser("Danieldin", 19, "Almaty",
+                "danieldin@mail.kz", "Kniga2026dan");
+        User daulet = SecurityUtils.registerUser("Daulet", 20, "Almaty",
+                "daulet@mail.kz", "Daulet2026read");
+        User nursultan = SecurityUtils.registerUser("Nursultan", 20, "Astana",
+                "nursultan@mail.kz", "Nurs2026book");
+        User asylzhan = SecurityUtils.registerUser("Asylzhan", 20, "Almaty",
+                "asylzhan@mail.kz", "Asyl2026club");
 
-        User nursultan = new User("Нұрсұлтан", 20, "Астана");
-        nursultan.addGenre("детектив");
-        nursultan.addGenre("романтика");
-        nursultan.addAuthor("Агата Кристи");
-        nursultan.addAuthor("Джейн Остин");
+        if (daniel == null || daulet == null || nursultan == null || asylzhan == null) {
+            System.out.println("Oshibka registratsii: programma ostanovlena.");
+            return;
+        }
 
-        User asylzhan = new User("Асылжан", 20, "Алматы");
-        asylzhan.addGenre("фантастика");
-        asylzhan.addGenre("классика");
-        asylzhan.addAuthor("Брэдбери");
-        asylzhan.addAuthor("Азимов");
-        asylzhan.addAuthor("Достоевский");
+        daniel.addGenre("fentezi");
+        daniel.addGenre("klassika");
+        daniel.addGenre("poeziya");
+        daniel.addAuthor("Tolkin");
+        daniel.addAuthor("Dostoevskiy");
+        daniel.addAuthor("Abay");
+
+        daulet.addGenre("fentezi");
+        daulet.addGenre("fantastika");
+        daulet.addGenre("klassika");
+        daulet.addAuthor("Tolkin");
+        daulet.addAuthor("Bredberi");
+        daulet.addAuthor("Dostoevskiy");
+
+        nursultan.addGenre("detektiv");
+        nursultan.addGenre("romantika");
+        nursultan.addAuthor("Agata Kristi");
+        nursultan.addAuthor("Dzheyn Ostin");
+
+        asylzhan.addGenre("fantastika");
+        asylzhan.addGenre("klassika");
+        asylzhan.addAuthor("Bredberi");
+        asylzhan.addAuthor("Azimov");
+        asylzhan.addAuthor("Dostoevskiy");
+
+        SecurityUtils.registerUser("' OR '1'='1", 20, "Almaty",
+                "hack@mail.kz", "Hack2026pass");
+        SecurityUtils.registerUser("Viktor", 45, "Almaty",
+                "viktor@mail.kz", "Viktor2026old");
+        SecurityUtils.registerUser("Aruzhan", 21, "Almaty",
+                "aruzhan-mail", "Aruzhan2026");
+        SecurityUtils.registerUser("Timur", 22, "Almaty",
+                "timur@mail.kz", "123");
+
+        System.out.println();
+        System.out.println("Khranenie parolya (Security)");
+        System.out.println("Parol Danieldina v baze: "
+                + daniel.getHashPreview() + "... (SHA-256 + sol)");
+
+        System.out.println();
+        System.out.println("Vkhod v sistemu (Security)");
+        SecurityUtils.login(daniel, "Kniga2026dan");
+        SecurityUtils.login(daulet, "123456");
+        SecurityUtils.login(daulet, "qwerty");
+        SecurityUtils.login(daulet, "password");
+        SecurityUtils.login(daulet, "Daulet2026read");
 
         ArrayList<User> all = new ArrayList<>();
         all.add(daniel);
@@ -186,8 +327,8 @@ public class Main {
         all.add(nursultan);
         all.add(asylzhan);
 
-        // --- Подбор пары для Даниэлдина разными стратегиями ---
-        System.out.println("=== Подбор пары для " + daniel.getName() + " (Strategy) ===");
+        System.out.println();
+        System.out.println("Podbor pary dlya " + daniel.getName() + " (Strategy)");
         Matchmaker matchmaker = new Matchmaker(new GenreMatchStrategy());
         matchmaker.printMatches(daniel, all);
 
@@ -197,7 +338,6 @@ public class Main {
         matchmaker.setStrategy(new CityAgeMatchStrategy());
         matchmaker.printMatches(daniel, all);
 
-        // Комбинированная формула: собирается из других стратегий с весами
         CombinedMatchStrategy combined = new CombinedMatchStrategy();
         combined.add(new GenreMatchStrategy(), 1.0);
         combined.add(new AuthorMatchStrategy(), 0.5);
@@ -208,36 +348,8 @@ public class Main {
         User best = matchmaker.findBest(daniel, all);
         if (best != null) {
             System.out.println();
-            System.out.println("Лучшая пара (" + combined.getName() + "): " + best.getName());
-        }
-    }
-}
-
-// ======================= МОДЕЛЬ ================================
-
-class User {
-    private String name;
-    private int age;
-    private String city;
-    private ArrayList<String> genres = new ArrayList<>();
-    private ArrayList<String> authors = new ArrayList<>();
-
-    public User(String name, int age, String city) {
-        this.name = name;
-        this.age = age;
-        this.city = city;
-    }
-
-    public void addGenre(String genre)   { genres.add(genre); }
-    public void addAuthor(String author) { authors.add(author); }
-
-    public String getName()               { return name; }
-    public int getAge()                   { return age; }
-    public String getCity()               { return city; }
-    public ArrayList<String> getGenres()  { return genres; }
-    public ArrayList<String> getAuthors() { return authors; }
-}
-
+            System.out.println("Luchshaya para (" + combined.getName() + "): " + best.getName());
+            System.out.println("Uvedomlenie otpravleno na: " + best.getMa
 
 
 
